@@ -1,5 +1,5 @@
 from pathlib import Path
-from spec import Spec
+from .spec import Spec
 import argparse
 import logging
 import msgspec

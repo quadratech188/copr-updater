@@ -1,0 +1,8 @@
+[project]
+name = "copr_updater"
+version = "0.0.0"
+authors = [
+	{name = "quadratech188", email = "quadratech188@gmail.com"}
+]
+description = "Personal COPR autoupdater"
+readme = "README.md"

@@ -1,4 +1,4 @@
-from forge import Forge
+from .forge import Forge
 
 class Spec:
     def __init__(self, text: str):
