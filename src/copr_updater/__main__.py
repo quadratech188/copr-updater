@@ -63,6 +63,7 @@ for name, repo_config in config.repos.items():
 
         if spec.version >= latest_version:
             logger.info(f'{spec_path.name}: No updates ')
+            continue
 
         spec.version = latest_version
         spec.release = 0
