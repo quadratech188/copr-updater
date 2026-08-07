@@ -37,6 +37,7 @@ with open(args.config) as f: # pyright: ignore[reportAny]
 SIGNATURE = pygit2.Signature(config.signature.name, config.signature.email, int(time.time()), 0)
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 for name, repo_config in config.repos.items():
     repo = pygit2.Repository(repo_config.dir)
@@ -60,7 +61,8 @@ for name, repo_config in config.repos.items():
 
         latest_version = spec.forge.latest_version()
 
-        if spec.version >= latest_version: continue
+        if spec.version >= latest_version:
+            logger.info(f'{spec_path.name}: No updates ')
 
         spec.version = latest_version
         spec.release = 0
