@@ -24,7 +24,10 @@ class Config(msgspec.Struct):
 parser = argparse.ArgumentParser()
 
 _ = parser.add_argument('--config', default='./config.toml')
+_ = parser.add_argument('--no-push', action='store_true')
 args = parser.parse_args()
+
+no_push: bool = args.no_push  # pyright: ignore[reportAny]
 
 with open(args.config) as f: # pyright: ignore[reportAny]
     def dec_hook(type_, obj): # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
@@ -89,6 +92,8 @@ for name, repo_config in config.repos.items():
 
         logger.info(f'{repo.path}: Create tag | {tag_name}')
         _ = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
+
+        if no_push: continue
 
         remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
 
