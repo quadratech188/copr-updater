@@ -43,6 +43,8 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 for name, repo_config in config.repos.items():
+    repo_config.dir = repo_config.dir.absolute()
+
     repo = pygit2.Repository(repo_config.dir)
     credentials = pygit2.UserPass(repo_config.git_username, repo_config.git_password)
 
@@ -65,15 +67,17 @@ for name, repo_config in config.repos.items():
         latest_version = spec.forge.latest_version()
 
         if spec.version >= latest_version:
-            logger.info(f'{spec_path.name}: No updates ')
+            logger.info(f'{spec_path}: No updates ')
             continue
+
+        logger.info(f'{spec_path}: {spec.version} -> {latest_version}')
 
         spec.version = latest_version
         spec.release = 0
 
         _ = spec_path.write_text(spec.text())
 
-        repo.index.add(spec_path)
+        repo.index.add(spec_path.relative_to(repo.workdir))
         repo.index.write()
 
         commit_message = f'auto: Bump {spec_path.name} to version {spec.version}'
@@ -93,9 +97,10 @@ for name, repo_config in config.repos.items():
         logger.info(f'{repo.path}: Create tag | {tag_name}')
         tag = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
 
-        if no_push: continue
-
-        remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
+        logger.info(f'{repo.path}: Push {remote.url}')
+        if not no_push: remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
 
         if repo_config.webhook_url:
-            requests.post(f'{repo_config.webhook_url}{spec.name}/').raise_for_status()
+            webhook_url = f'{repo_config.webhook_url}{spec.name}/'
+            logger.info(f'{repo.path}: Run webhook {webhook_url}')
+            if not no_push: requests.post(webhook_url).raise_for_status()
