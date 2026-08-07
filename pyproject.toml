@@ -6,3 +6,8 @@ authors = [
 ]
 description = "Personal COPR autoupdater"
 readme = "README.md"
+
+dependencies = [
+	"msgspec",
+	"pygit2"
+]
