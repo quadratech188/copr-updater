@@ -92,13 +92,14 @@ for name, repo_config in config.repos.items():
             [repo.head.target]
         )
 
-        tag_name = f'{spec.name}-{spec.version}-{spec.release}'
+        # tag_name = f'{spec.name}-{spec.version}-{spec.release}'
 
-        logger.info(f'{repo.path}: Create tag | {tag_name}')
-        tag = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
+        # logger.info(f'{repo.path}: Create tag | {tag_name}')
+        # tag = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
 
         logger.info(f'{repo.path}: Push {remote.url}')
-        if not no_push: remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
+        # if not no_push: remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
+        if not no_push: remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
 
         if repo_config.webhook_url:
             webhook_url = f'{repo_config.webhook_url}{spec.name}/'
