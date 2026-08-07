@@ -91,11 +91,11 @@ for name, repo_config in config.repos.items():
         tag_name = f'{spec.name}-{spec.version}-{spec.release}'
 
         logger.info(f'{repo.path}: Create tag | {tag_name}')
-        _ = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
+        tag = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
 
         if no_push: continue
 
-        remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
+        remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
 
         if repo_config.webhook_url:
             requests.post(f'{repo_config.webhook_url}{spec.name}/').raise_for_status()
