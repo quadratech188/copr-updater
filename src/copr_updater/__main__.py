@@ -73,7 +73,7 @@ for name, repo_config in config.repos.items():
         logger.info(f'{spec_path}: {spec.version} -> {latest_version}')
 
         spec.version = latest_version
-        spec.release = 0
+        spec.release = 1
 
         _ = spec_path.write_text(spec.text())
 
