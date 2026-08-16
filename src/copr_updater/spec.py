@@ -46,7 +46,7 @@ class Spec:
         self.set_property('Release: ', str(value) + '%{?dist}')
 
     def text(self):
-        return '\n'.join(self.lines)
+        return '\n'.join(self.lines) + '\n'
 
 def version_cmp(a: str, b: str):
     a_list = list(map(int, a.split('.')))
