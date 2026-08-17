@@ -42,6 +42,52 @@ SIGNATURE = pygit2.Signature(config.signature.name, config.signature.email, int(
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+def update_spec(repo: pygit2.Repository, spec_path: Path):
+    spec = Spec(spec_path.read_text())
+
+    latest_version = spec.forge.latest_version()
+
+    if spec.version >= latest_version:
+        logger.info(f'{spec_path}: No updates ')
+        return
+
+    logger.info(f'{spec_path}: {spec.version} -> {latest_version}')
+
+    spec.version = latest_version
+    if spec.release != '%autorelease':
+        spec.release = 1
+
+    _ = spec_path.write_text(spec.text())
+
+    repo.index.add(spec_path.relative_to(repo.workdir))
+    repo.index.write()
+
+    commit_message = f'auto: Bump {spec_path.name} to version {spec.version}'
+
+    logger.info(f'{repo.path}: Create commit | {commit_message}')
+    _ = repo.create_commit(
+        repo.head.name,
+        SIGNATURE,
+        SIGNATURE,
+        commit_message,
+        repo.index.write_tree(),
+        [repo.head.target]
+    )
+
+    # tag_name = f'{spec.name}-{spec.version}-{spec.release}'
+
+    # logger.info(f'{repo.path}: Create tag | {tag_name}')
+    # tag = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
+
+    logger.info(f'{repo.path}: Push {remote.url}')
+    # if not no_push: remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
+    if not no_push: remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
+
+    if repo_config.webhook_url:
+        webhook_url = f'{repo_config.webhook_url}{spec.name}/'
+        logger.info(f'{repo.path}: Run webhook {webhook_url}')
+        if not no_push: requests.post(webhook_url).raise_for_status()
+
 for name, repo_config in config.repos.items():
     repo_config.dir = repo_config.dir.absolute()
 
@@ -62,47 +108,7 @@ for name, repo_config in config.repos.items():
     repo.reset(branch.upstream.target, pygit2.enums.ResetMode.HARD)
 
     for spec_path in repo_config.dir.glob('*.spec'):
-        spec = Spec(spec_path.read_text())
-
-        latest_version = spec.forge.latest_version()
-
-        if spec.version >= latest_version:
-            logger.info(f'{spec_path}: No updates ')
-            continue
-
-        logger.info(f'{spec_path}: {spec.version} -> {latest_version}')
-
-        spec.version = latest_version
-        if spec.release != '%autorelease':
-            spec.release = 1
-
-        _ = spec_path.write_text(spec.text())
-
-        repo.index.add(spec_path.relative_to(repo.workdir))
-        repo.index.write()
-
-        commit_message = f'auto: Bump {spec_path.name} to version {spec.version}'
-
-        logger.info(f'{repo.path}: Create commit | {commit_message}')
-        _ = repo.create_commit(
-            repo.head.name,
-            SIGNATURE,
-            SIGNATURE,
-            commit_message,
-            repo.index.write_tree(),
-            [repo.head.target]
-        )
-
-        # tag_name = f'{spec.name}-{spec.version}-{spec.release}'
-
-        # logger.info(f'{repo.path}: Create tag | {tag_name}')
-        # tag = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
-
-        logger.info(f'{repo.path}: Push {remote.url}')
-        # if not no_push: remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
-        if not no_push: remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
-
-        if repo_config.webhook_url:
-            webhook_url = f'{repo_config.webhook_url}{spec.name}/'
-            logger.info(f'{repo.path}: Run webhook {webhook_url}')
-            if not no_push: requests.post(webhook_url).raise_for_status()
+        try:
+            update_spec(repo, spec_path)
+        except Exception as e:
+            logger.error(e)
