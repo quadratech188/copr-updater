@@ -40,7 +40,10 @@ class Spec:
 
     @property
     def release(self):
-        return int(self.get_property('Release: ').removesuffix('%{?dist}'))
+        value = self.get_property('Release: ')
+        if value == '%autorelease':
+            return value
+        return int(value.removesuffix('%{?dist}'))
     @release.setter
     def release(self, value: int):
         self.set_property('Release: ', str(value) + '%{?dist}')
