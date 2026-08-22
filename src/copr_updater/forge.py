@@ -1,7 +1,11 @@
 from typing import override
+import logging
 import re
 import requests
 import urllib.parse
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class Forge:
     def latest_version(self) -> str:
@@ -25,8 +29,16 @@ class Github(Forge):
 
     @override
     def latest_version(self) -> str:
+        logger.debug(requests.get('https://api.github.com/rate_limit').content)
+
         url = f'https://api.github.com/repos/{self.account}/{self.repo}/releases/latest'
         response = requests.get(url)
+
+        logger.debug(requests.get('https://api.github.com/rate_limit').content)
+
+        if not response.ok:
+            logger.debug(response.headers)
+
         response.raise_for_status()
         tag = str(response.json()['tag_name']) # pyright: ignore[reportAny]
 
