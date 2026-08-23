@@ -5,7 +5,7 @@ import requests
 import urllib.parse
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class Forge:
     def latest_version(self) -> str:
