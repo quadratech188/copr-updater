@@ -1,0 +1,14 @@
+[signature]
+name = "quadratech188"
+email = "quadratech188@gmail.com"
+
+[repos.kime-copr]
+dir = "./kime-copr"
+git_username = "quadratech188"
+git_password = "<GIT_PASSWORD>"
+webhook_url = "<WEBHOOK_URL>"
+
+version_checker = {
+	type = "github-release"
+	url = "https://github.com/Riey/kime"
+}

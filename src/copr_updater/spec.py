@@ -1,4 +1,5 @@
-from .forge import Forge
+from copr_updater.version import Version, make_version, version_to_str
+
 
 class Spec:
     def __init__(self, text: str):
@@ -8,7 +9,6 @@ class Spec:
             'Name: ',
             'Version: ',
             'Release: ',
-            '%global forgeurl '
         ]
 
         self.property_indices: dict[str, int] = {}
@@ -17,8 +17,6 @@ class Spec:
             for property in properties:
                 if line.startswith(property):
                     self.property_indices[property] = i
-
-        self.forge: Forge = Forge.get(self.get_property('%global forgeurl '))
 
     def get_property(self, name: str):
         line = self.lines[self.property_indices[name]]
@@ -29,10 +27,10 @@ class Spec:
 
     @property
     def version(self):
-        return self.get_property('Version: ')
+        return make_version(self.get_property('Version: '))
     @version.setter
-    def version(self, value: str):
-        self.set_property('Version: ', value)
+    def version(self, value: Version):
+        self.set_property('Version: ', version_to_str(value))
 
     @property
     def name(self):
@@ -51,7 +49,13 @@ class Spec:
     def text(self):
         return '\n'.join(self.lines) + '\n'
 
-def version_cmp(a: str, b: str):
-    a_list = list(map(int, a.split('.')))
-    b_list = list(map(int, b.split('.')))
+def version_cmp(a: str, b: str) -> bool:
+    def int_if_possible(x: str):
+        try:
+            return int(x)
+        except Exception:
+            return x
+
+    a_list = list(map(int_if_possible, a.split('.')))
+    b_list = list(map(int_if_possible, b.split('.')))
     return a_list < b_list

@@ -1,4 +1,6 @@
 from pathlib import Path
+
+from .version_checker import VersionChecker
 from .spec import Spec
 import argparse
 import logging
@@ -15,7 +17,8 @@ class RepoConfig(msgspec.Struct):
     dir: Path
     git_username: str
     git_password: str
-    webhook_url: str | None
+    version_checker: VersionChecker
+    webhook_url: str | None = None
 
 class Config(msgspec.Struct):
     signature: SignatureConfig
@@ -24,10 +27,12 @@ class Config(msgspec.Struct):
 parser = argparse.ArgumentParser()
 
 _ = parser.add_argument('--config', default='./config.toml')
-_ = parser.add_argument('--no-push', action='store_true')
+_ = parser.add_argument('--local-only', action='store_true')
+
+
 args = parser.parse_args()
 
-no_push: bool = args.no_push  # pyright: ignore[reportAny]
+LOCAL_ONLY: bool = args.local_only  # pyright: ignore[reportAny]
 
 with open(args.config) as f: # pyright: ignore[reportAny]
     def dec_hook(type_, obj): # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
@@ -61,48 +66,46 @@ for name, repo_config in config.repos.items():
     logger.info(f'{repo.path}: Reset to {branch.upstream.shorthand}')
     repo.reset(branch.upstream.target, pygit2.enums.ResetMode.HARD)
 
-    for spec_path in repo_config.dir.glob('*.spec'):
-        spec = Spec(spec_path.read_text())
+    specs = list(repo_config.dir.glob('*.spec'))
+    if len(specs) != 1:
+        raise Exception('Repository doesn\'t have exactly 1 spec file')
 
-        latest_version = spec.forge.latest_version()
+    spec_path = specs[0]
 
-        if spec.version >= latest_version:
-            logger.info(f'{spec_path}: No updates ')
-            continue
+    spec = Spec(spec_path.read_text())
+    latest_version = repo_config.version_checker.latest_version()
 
-        logger.info(f'{spec_path}: {spec.version} -> {latest_version}')
+    logger.info(f'{spec_path}: {spec.version} -> {latest_version}')
 
-        spec.version = latest_version
-        if spec.release != '%autorelease':
-            spec.release = 1
+    if spec.version >= latest_version:
+        continue
 
-        _ = spec_path.write_text(spec.text())
+    spec.version = latest_version
+    if spec.release != '%autorelease':
+        spec.release = 1
 
-        repo.index.add(spec_path.relative_to(repo.workdir))
-        repo.index.write()
+    _ = spec_path.write_text(spec.text())
 
-        commit_message = f'auto: Bump {spec_path.name} to version {spec.version}'
+    repo.index.add(spec_path.relative_to(repo.workdir))
+    repo.index.write()
 
-        logger.info(f'{repo.path}: Create commit | {commit_message}')
-        _ = repo.create_commit(
-            repo.head.name,
-            SIGNATURE,
-            SIGNATURE,
-            commit_message,
-            repo.index.write_tree(),
-            [repo.head.target]
-        )
+    commit_message = f'auto: Bump {spec_path.name} to version {spec.version}'
 
-        # tag_name = f'{spec.name}-{spec.version}-{spec.release}'
+    logger.info(f'{repo.path}: Create commit | {commit_message}')
+    _ = repo.create_commit(
+        repo.head.name,
+        SIGNATURE,
+        SIGNATURE,
+        commit_message,
+        repo.index.write_tree(),
+        [repo.head.target]
+    )
 
-        # logger.info(f'{repo.path}: Create tag | {tag_name}')
-        # tag = repo.create_tag(tag_name, repo.head.target, pygit2.enums.ObjectType.COMMIT, SIGNATURE, '')
+    if LOCAL_ONLY: continue
 
-        logger.info(f'{repo.path}: Push {remote.url}')
-        # if not no_push: remote.push([repo.head.name, f'refs/tags/{tag_name}'], callbacks=pygit2.RemoteCallbacks(credentials))
-        if not no_push: remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
+    remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
 
-        if repo_config.webhook_url:
-            webhook_url = f'{repo_config.webhook_url}{spec.name}/'
-            logger.info(f'{repo.path}: Run webhook {webhook_url}')
-            if not no_push: requests.post(webhook_url).raise_for_status()
+    if repo_config.webhook_url:
+        webhook_url = f'{repo_config.webhook_url}'
+        logger.info(f'{repo.path}: Run webhook')
+        requests.post(webhook_url).raise_for_status()
