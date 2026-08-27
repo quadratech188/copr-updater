@@ -106,6 +106,6 @@ for name, repo_config in config.repos.items():
     remote.push([repo.head.name], callbacks=pygit2.RemoteCallbacks(credentials))
 
     if repo_config.webhook_url:
-        webhook_url = f'{repo_config.webhook_url}'
+        webhook_url = f'{repo_config.webhook_url}{spec.name}/'
         logger.info(f'{repo.path}: Run webhook')
         requests.post(webhook_url).raise_for_status()
