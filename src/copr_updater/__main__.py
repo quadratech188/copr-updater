@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from copr_updater.version import version_to_str
+
 from .version_checker import VersionChecker
 from .spec import Spec
 import argparse
@@ -89,7 +91,7 @@ for name, repo_config in config.repos.items():
     repo.index.add(spec_path.relative_to(repo.workdir))
     repo.index.write()
 
-    commit_message = f'auto: Bump {spec_path.name} to version {spec.version}'
+    commit_message = f'auto: Bump {spec_path.name} to version {version_to_str(spec.version)}'
 
     logger.info(f'{repo.path}: Create commit | {commit_message}')
     _ = repo.create_commit(
